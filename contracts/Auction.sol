@@ -1,8 +1,8 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "./token/IERC721.sol";
-import "./token/IERC20.sol";
+import "./IERC721.sol";
+import "./IERC20.sol";
 import "./utils/AddressUtils.sol";
 import "./utils/SafeMath.sol";
 import "./Globals.sol";

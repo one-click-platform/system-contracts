@@ -3,8 +3,9 @@ pragma solidity ^0.7.0;
 
 import "./IERC20.sol";
 import "./utils/SafeMath.sol";
+import "./utils/Ownable.sol";
 
-contract WETH is IERC20 {
+contract WETH is Ownable, IERC20 {
     using SafeMath for uint256;
 
     uint256 private _totalSupply;
@@ -48,8 +49,6 @@ contract WETH is IERC20 {
         require(sender != address(0), "WETH: transfer from the zero address");
         require(recipient != address(0), "WETH: transfer to the zero address");
 
-        _beforeTokenTransfer(sender, recipient, amount);
-
         _balances[sender] = _balances[sender].sub(amount, "WETH: transfer amount exceeds balance");
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
@@ -68,5 +67,16 @@ contract WETH is IERC20 {
         emit Approval(owner, spender, amount);
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual {}
+    function mint(address _recepient, uint256 _amount) external virtual override onlyOwner returns (bool) {
+        _mint(_recepient, _amount);
+        return true;
+    }
+
+    function _mint(address account, uint256 amount) internal virtual {
+        require(account != address(0), "WETH: mint to the zero address");
+
+        _totalSupply += amount;
+        _balances[account] += amount;
+        emit Transfer(address(0), account, amount);
+    }
 }

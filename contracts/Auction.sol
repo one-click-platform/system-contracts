@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "./IERC721.sol";
-import "./IERC20.sol";
-import "./utils/AddressUtils.sol";
-import "./utils/Ownable.sol";
-import "./utils/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "./Globals.sol";
 
 contract Auction is Ownable {
     using SafeMath for uint256;
-    using AddressUtils for address;
+    using Address for address;
 
     enum AuctionStatus {NONE, PENDING, ACTIVE, FINISHED}
 

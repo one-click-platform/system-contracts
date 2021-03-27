@@ -1,13 +1,15 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "./IERC721.sol";
 import "./IERC20.sol";
 import "./utils/AddressUtils.sol";
+import "./utils/Ownable.sol";
 import "./utils/SafeMath.sol";
 import "./Globals.sol";
 
-contract Auction {
+contract Auction is Ownable {
     using SafeMath for uint256;
     using AddressUtils for address;
 
@@ -37,6 +39,7 @@ contract Auction {
     }
 
     event AuctionCreated(address _creator, address _asset, uint256 assetId, address _token, uint256 _auctionId);
+    event AuctionClosed(uint256 _auctionId);
     event AuctionBid(uint256 _auctionId, address _bidder, uint256 _amount);
     event TokensClaimed(uint256 _auctionId, address _creator);
     event AssetClaimed(uint256 _auctionId, address _winner);
@@ -168,6 +171,7 @@ contract Auction {
         require(_ok, "Failed to transfer the repayment");
 
         auctions[_auctionId].repaymentTransferred = true;
+
         emit TokensClaimed(_auctionId, _auction.creator);
     }
 
@@ -177,6 +181,8 @@ contract Auction {
         require(!_auction.lotTransferred, "The lot has already been transferred");
 
         IERC721(_auction.assetAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.assetId);
+
+        auctions[_auctionId].lotTransferred = true;
 
         emit AssetClaimed(_auctionId, msg.sender);
     }
@@ -194,6 +200,24 @@ contract Auction {
         auctions[_auctionId] = _auction;
 
         emit AssetClaimed(_auctionId, msg.sender);
+    }
+
+    function closeAuction(uint256 _auctionId) public onlyOwner shouldBeFinished(_auctionId) {
+        AuctionInfo memory _auction = auctions[_auctionId];
+
+        if (!_auction.repaymentTransferred) {
+            bool _ok = IERC20(_auction.currencyAddress).transferFrom(msg.sender, address(this), _auction.buyNowPrice);
+            require(_ok, "Failed to transfer the repayment");
+            _auction.repaymentTransferred = true;
+        }
+        if (!_auction.lotTransferred) {
+            IERC721(_auction.assetAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.assetId);
+            _auction.lotTransferred = true;
+        }
+
+        auctions[_auctionId] = _auction;
+
+        emit AuctionClosed(_auctionId);
     }
 
     modifier shouldBeActive(uint256 _auctionId) {

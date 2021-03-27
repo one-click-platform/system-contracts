@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
 import "./IERC20.sol";
@@ -39,17 +40,17 @@ contract WETH is IERC20 {
 
     function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "WETH: transfer amount exceeds allowance"));
         return true;
     }
 
     function _transfer(address sender, address recipient, uint256 amount) internal virtual {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
+        require(sender != address(0), "WETH: transfer from the zero address");
+        require(recipient != address(0), "WETH: transfer to the zero address");
 
         _beforeTokenTransfer(sender, recipient, amount);
 
-        _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
+        _balances[sender] = _balances[sender].sub(amount, "WETH: transfer amount exceeds balance");
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
     }
@@ -60,8 +61,8 @@ contract WETH is IERC20 {
     }
 
     function _approve(address owner, address spender, uint256 amount) internal virtual {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
+        require(owner != address(0), "WETH: approve from the zero address");
+        require(spender != address(0), "WETH: approve to the zero address");
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);

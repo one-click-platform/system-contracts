@@ -18,9 +18,10 @@ contract WERC721 is Ownable, ERC721 {
         }
     }
 
-    function mint(address _to, uint256 _tokenId, bytes memory _data) public onlyEligibleUser(msg.sender) {
+    function mint(address _to, bytes memory _data) public onlyEligibleUser(msg.sender) {
+        uint256 _tokenId = totalSupply.add(1);
+        totalSupply = _tokenId;
         _safeMint(_to, _tokenId, _data);
-        totalSupply = totalSupply.add(1);
     }
 
     function tokensOfOwner(address _ownerOfTokens) public view returns (uint256[] memory) {

@@ -153,6 +153,11 @@ contract Auction is Ownable {
 
     function getRaisingBid(uint256 _auctionId) public view shouldBeActive(_auctionId) returns (uint256) {
         AuctionInfo memory _auction = auctions[_auctionId];
+
+        if (_auction.highestBid == 0) {
+            return _auction.startPrice;
+        }
+
         uint256 _highestBid = _auction.highestBid;
         return _highestBid.mul(_auction.bidIncrement).div(getDecimal()).add(_highestBid);
     }

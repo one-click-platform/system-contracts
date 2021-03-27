@@ -24,8 +24,8 @@ contract Auction is Ownable {
         uint256 durationIncrement;
         uint256 bidIncrement;
         string description;
-        address assetAddress;
-        uint256 assetId;
+        address tokenAddress;
+        uint256 tokenId;
         address currencyAddress;
 
         address currentBidder;
@@ -34,25 +34,22 @@ contract Auction is Ownable {
         bool lotBought;
         bool repaymentTransferred;
         bool lotTransferred;
-
-        AuctionStatus status;
     }
 
-    event AuctionCreated(address _creator, address _asset, uint256 assetId, address _token, uint256 _auctionId);
+    event AuctionCreated(address _creator, address _tokenAddress, uint256 _tokenId, address _currencyAddress, uint256 _auctionId);
     event AuctionClosed(uint256 _auctionId);
     event AuctionBid(uint256 _auctionId, address _bidder, uint256 _amount);
-    event TokensClaimed(uint256 _auctionId, address _creator);
-    event AssetClaimed(uint256 _auctionId, address _winner);
+    event RepaymentTransferred(uint256 _auctionId, address _creator);
+    event LotTransferred(uint256 _auctionId, address _winner);
 
-    uint256 private countOfAuctions;
+    uint256 public countOfAuctions;
     mapping(uint256 => AuctionInfo) private auctions;
-    mapping(uint256 => mapping(address => uint256)) public userBids;
 
     constructor() {}
 
     function createAuction(
-        address _assetAddress,
-        uint256 _assetId,
+        address _tokenAddress,
+        uint256 _tokenId,
         address _currencyAddress,
         uint256 _startPrice,
         uint256 _buyNowPrice,
@@ -62,11 +59,11 @@ contract Auction is Ownable {
         uint256 _bidIncrement,
         string memory _description
     ) public returns (uint256) {
-        require(_assetAddress.isContract(), "Given asset is not a contract");
-        IERC721 _asset = IERC721(_assetAddress);
-        require(_asset.ownerOf(_assetId) == msg.sender, "Is not owner of asset");
-        require(_asset.getApproved(_assetId) == address(this), "Asset is not approved");
-        require(_currencyAddress.isContract(), "Given token is not a contract");
+        require(_tokenAddress.isContract(), "Given token is not a contract");
+        IERC721 _tokenContract = IERC721(_tokenAddress);
+        require(_tokenContract.ownerOf(_tokenId) == msg.sender, "Is not owner of asset");
+        require(_tokenContract.getApproved(_tokenId) == address(this), "Lot is not approved");
+        require(_currencyAddress.isContract(), "Given currency is not a contract");
         require(_startPrice != 0, "Invalid start price");
         require(_buyNowPrice >= _startPrice, "Buy now price should higher or equal to start price");
         require(_startTime > block.timestamp, "Invalid start time of auction");
@@ -76,8 +73,8 @@ contract Auction is Ownable {
 
         AuctionInfo memory _auction;
         _auction.creator = msg.sender;
-        _auction.assetAddress = _assetAddress;
-        _auction.assetId = _assetId;
+        _auction.tokenAddress = _tokenAddress;
+        _auction.tokenId = _tokenId;
         _auction.currencyAddress = _currencyAddress;
         _auction.startPrice = _startPrice;
         _auction.buyNowPrice = _buyNowPrice;
@@ -90,9 +87,13 @@ contract Auction is Ownable {
         auctions[_auctionId] = _auction;
         countOfAuctions++;
 
-        emit AuctionCreated(_auction.creator, _auction.assetAddress, _auction.assetId, _auction.currencyAddress, _auctionId);
+        emit AuctionCreated(_auction.creator, _auction.tokenAddress, _auction.tokenId, _auction.currencyAddress, _auctionId);
 
         return _auctionId;
+    }
+
+    function getAuctionInfo(uint256 _auctionId) public shouldExist(_auctionId) view returns (AuctionInfo memory) {
+        return auctions[_auctionId];
     }
 
     function getStatus(uint256 _auctionId) public view returns (AuctionStatus) {
@@ -114,17 +115,9 @@ contract Auction is Ownable {
         return AuctionStatus.FINISHED;
     }
 
-    function getAuctionInfo(uint256 _auctionId) public shouldExist(_auctionId) view returns (AuctionInfo memory) {
-        return auctions[_auctionId];
-    }
-
-    function getUserLatestBid(uint256 _auctionId) public shouldBeActive(_auctionId) view returns (uint256) {
-        return userBids[_auctionId][msg.sender];
-    }
-
-    function bid(uint256 _auctionId, uint256 _amount) public shouldBeActive(_auctionId) {
+    function bid(uint256 _auctionId, uint256 _amount) public {
         require(
-            _amount >= _getRaisingBid(_auctionId),
+            _amount >= getRaisingBid(_auctionId),
             "Bid amount must exceed the highest bid by the minimum increment percentage or more."
         );
 
@@ -147,16 +140,11 @@ contract Auction is Ownable {
         _auction.duration = _auction.duration.add(_auction.durationIncrement);
 
         auctions[_auctionId] = _auction;
-        userBids[_auctionId][msg.sender] = _amount;
 
         emit AuctionBid(_auctionId, msg.sender, _amount);
     }
 
-    function getRaisingBid(uint256 _auctionId) public shouldBeActive(_auctionId) view returns (uint256) {
-        return _getRaisingBid(_auctionId);
-    }
-
-    function _getRaisingBid(uint256 _auctionId) internal view returns (uint256) {
+    function getRaisingBid(uint256 _auctionId) public view shouldBeActive(_auctionId) returns (uint256) {
         AuctionInfo memory _auction = auctions[_auctionId];
         uint256 _highestBid = _auction.highestBid;
         return _highestBid.mul(_auction.bidIncrement).div(getDecimal()).add(_highestBid);
@@ -172,7 +160,7 @@ contract Auction is Ownable {
 
         auctions[_auctionId].repaymentTransferred = true;
 
-        emit TokensClaimed(_auctionId, _auction.creator);
+        emit RepaymentTransferred(_auctionId, _auction.creator);
     }
 
     function claimLot(uint256 _auctionId) public shouldBeFinished(_auctionId) {
@@ -180,11 +168,11 @@ contract Auction is Ownable {
         require(_auction.currentBidder == msg.sender, "Sender is not winner");
         require(!_auction.lotTransferred, "The lot has already been transferred");
 
-        IERC721(_auction.assetAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.assetId);
+        IERC721(_auction.tokenAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.tokenId);
 
         auctions[_auctionId].lotTransferred = true;
 
-        emit AssetClaimed(_auctionId, msg.sender);
+        emit LotTransferred(_auctionId, msg.sender);
     }
 
     function buyNow(uint256 _auctionId) public shouldBeActive(_auctionId) {
@@ -193,13 +181,13 @@ contract Auction is Ownable {
         bool _ok = IERC20(_auction.currencyAddress).transferFrom(msg.sender, address(this), _auction.buyNowPrice);
         require(_ok, "Failed to transfer the repayment");
 
-        IERC721(_auction.assetAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.assetId);
+        IERC721(_auction.tokenAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.tokenId);
 
         _auction.lotBought = true;
         _auction.lotTransferred = true;
         auctions[_auctionId] = _auction;
 
-        emit AssetClaimed(_auctionId, msg.sender);
+        emit LotTransferred(_auctionId, msg.sender);
     }
 
     function closeAuction(uint256 _auctionId) public onlyOwner shouldBeFinished(_auctionId) {
@@ -211,7 +199,7 @@ contract Auction is Ownable {
             _auction.repaymentTransferred = true;
         }
         if (!_auction.lotTransferred) {
-            IERC721(_auction.assetAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.assetId);
+            IERC721(_auction.tokenAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.tokenId);
             _auction.lotTransferred = true;
         }
 

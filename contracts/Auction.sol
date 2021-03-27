@@ -66,19 +66,24 @@ contract Auction is Ownable {
         require(_currencyAddress.isContract(), "Given currency is not a contract");
         require(_startPrice != 0, "Invalid start price");
         require(_buyNowPrice >= _startPrice, "Buy now price should higher or equal to start price");
-        require(_startTime > block.timestamp, "Invalid start time of auction");
         require(_duration != 0, "Invalid auction duration");
         require(_durationIncrement != 0, "Invalid auction increment");
         require(0 < _bidIncrement && _bidIncrement <= getDecimal(), "Invalid bid increment");
 
         AuctionInfo memory _auction;
+
+        if (_startTime < block.timestamp) {
+            _auction.startTime = block.timestamp;
+        } else {
+            _auction.startTime = _startTime;
+        }
+
         _auction.creator = msg.sender;
         _auction.tokenAddress = _tokenAddress;
         _auction.tokenId = _tokenId;
         _auction.currencyAddress = _currencyAddress;
         _auction.startPrice = _startPrice;
         _auction.buyNowPrice = _buyNowPrice;
-        _auction.startTime = _startTime;
         _auction.duration = _duration;
         _auction.bidIncrement = _bidIncrement;
         _auction.description = _description;

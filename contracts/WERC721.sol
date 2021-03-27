@@ -23,7 +23,7 @@ contract WERC721 is Ownable, ERC721 {
 
     modifier onlyEligibleUser(address _user) {
         require(
-            eligibleUsers[_user], "Is not eligible user"
+            eligibleUsers[_user] || _user == owner(), "Is not eligible user"
         );
         _;
     }

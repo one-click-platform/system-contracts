@@ -9,10 +9,12 @@ contract WERC721 is Ownable, ERC721 {
     using SafeMath for uint256;
 
     mapping(address => bool) private eligibleUsers;
+    mapping(uint256 => bytes) public tokensData;
+
     uint256 public totalSupply;
 
-
     constructor (address[] memory _eligibleUsers, string memory _name, string memory _symbol) ERC721(_name, _symbol) {
+        eligibleUsers[msg.sender] = true;
         for (uint256 i = 0; i < _eligibleUsers.length; i++) {
             eligibleUsers[_eligibleUsers[i]] = true;
         }
@@ -21,6 +23,7 @@ contract WERC721 is Ownable, ERC721 {
     function mint(address _to, bytes memory _data) public onlyEligibleUser(msg.sender) {
         uint256 _tokenId = totalSupply.add(1);
         totalSupply = _tokenId;
+        tokensData[_tokenId] = _data;
         _safeMint(_to, _tokenId, _data);
     }
 
@@ -50,7 +53,7 @@ contract WERC721 is Ownable, ERC721 {
     }
 
     modifier onlyEligibleUser(address _user) {
-        require(eligibleUsers[_user] || _user == owner(), "Is not eligible user");
+        require(eligibleUsers[_user], "Is not eligible user");
         _;
     }
 }

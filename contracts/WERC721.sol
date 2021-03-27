@@ -13,8 +13,8 @@ contract WERC721 is Ownable, ERC721 {
         }
     }
 
-    function mint(address _to, uint256 _tokenId) public onlyEligibleUser(msg.sender) {
-        _safeMint(_to, _tokenId);
+    function mint(address _to, uint256 _tokenId, bytes memory _data) public onlyEligibleUser(msg.sender) {
+        _safeMint(_to, _tokenId, _data);
     }
 
     function switchUserPermissions(address _user) public onlyOwner {
@@ -22,9 +22,7 @@ contract WERC721 is Ownable, ERC721 {
     }
 
     modifier onlyEligibleUser(address _user) {
-        require(
-            eligibleUsers[_user] || _user == owner(), "Is not eligible user"
-        );
+        require(eligibleUsers[_user] || _user == owner(), "Is not eligible user");
         _;
     }
 }

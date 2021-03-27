@@ -70,6 +70,8 @@ contract Auction is Ownable {
         require(_durationIncrement != 0, "Invalid auction increment");
         require(0 < _bidIncrement && _bidIncrement <= getDecimal(), "Invalid bid increment");
 
+        _tokenContract.transferFrom(msg.sender, address(this), _tokenId);
+
         AuctionInfo memory _auction;
 
         if (_startTime < block.timestamp) {
@@ -173,7 +175,7 @@ contract Auction is Ownable {
         require(_auction.currentBidder == msg.sender, "Sender is not winner");
         require(!_auction.lotTransferred, "The lot has already been transferred");
 
-        IERC721(_auction.tokenAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.tokenId);
+        IERC721(_auction.tokenAddress).transferFrom(address(this), _auction.currentBidder, _auction.tokenId);
 
         auctions[_auctionId].lotTransferred = true;
 
@@ -186,7 +188,7 @@ contract Auction is Ownable {
         bool _ok = IERC20(_auction.currencyAddress).transferFrom(msg.sender, address(this), _auction.buyNowPrice);
         require(_ok, "Failed to transfer the repayment");
 
-        IERC721(_auction.tokenAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.tokenId);
+        IERC721(_auction.tokenAddress).transferFrom(address(this), _auction.currentBidder, _auction.tokenId);
 
         _auction.lotBought = true;
         _auction.lotTransferred = true;
@@ -204,7 +206,7 @@ contract Auction is Ownable {
             _auction.repaymentTransferred = true;
         }
         if (!_auction.lotTransferred) {
-            IERC721(_auction.tokenAddress).transferFrom(_auction.creator, _auction.currentBidder, _auction.tokenId);
+            IERC721(_auction.tokenAddress).transferFrom(address(this), _auction.currentBidder, _auction.tokenId);
             _auction.lotTransferred = true;
         }
 

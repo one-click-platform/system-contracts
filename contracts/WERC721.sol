@@ -9,7 +9,7 @@ contract WERC721 is Ownable, ERC721 {
     using SafeMath for uint256;
 
     mapping(address => bool) private eligibleUsers;
-    mapping(uint256 => bytes) public tokensData;
+    mapping(uint256 => string) public tokensData;
 
     uint256 public totalSupply;
 
@@ -20,11 +20,11 @@ contract WERC721 is Ownable, ERC721 {
         }
     }
 
-    function mint(address _to, bytes memory _data) public onlyEligibleUser(msg.sender) {
+    function mint(address _to, string memory _data) public onlyEligibleUser(msg.sender) {
         uint256 _tokenId = totalSupply.add(1);
         totalSupply = _tokenId;
         tokensData[_tokenId] = _data;
-        _safeMint(_to, _tokenId, _data);
+        _safeMint(_to, _tokenId);
     }
 
     function tokensOfOwner(address _ownerOfTokens) public view returns (uint256[] memory) {

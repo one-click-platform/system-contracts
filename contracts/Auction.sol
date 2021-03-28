@@ -13,7 +13,7 @@ contract Auction is Ownable {
     using SafeMath for uint256;
     using Address for address;
 
-    enum AuctionStatus {NONE, PENDING, ACTIVE, FINISHED}
+    enum AuctionStatus {NONE, PENDING, ACTIVE, FINISHED, CLOSED}
 
     struct AuctionInfo {
         address creator;
@@ -108,6 +108,9 @@ contract Auction is Ownable {
 
         if (_auction.creator == address(0)) {
             return AuctionStatus.NONE;
+        }
+        if (_auction.repaymentTransferred && _auction.lotTransferred) {
+            return AuctionStatus.CLOSED;
         }
         if (_auction.lotBought) {
             return AuctionStatus.FINISHED;

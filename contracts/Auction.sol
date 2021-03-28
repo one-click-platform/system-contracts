@@ -76,7 +76,7 @@ contract Auction is Ownable {
 
         if (_startTime < block.timestamp) {
             _auction.startTime = block.timestamp;
-            _auction.duration = _duration.sub(block.timestamp.sub(_startTime));
+            _auction.duration = _duration.sub(block.timestamp.sub(_auction.startTime));
         } else {
             _auction.startTime = _startTime;
         }

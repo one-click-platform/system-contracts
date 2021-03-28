@@ -168,7 +168,7 @@ contract Auction is Ownable {
 
     function claimRepayment(uint256 _auctionId) public shouldBeFinished(_auctionId) {
         AuctionInfo memory _auction = auctions[_auctionId];
-        require(_auction.creator == msg.sender, "Sender is not auction owner");
+        require(_auction.creator == msg.sender, "The Sender is not a auction creator");
         require(!_auction.repaymentTransferred, "The repayment has already been transferred");
 
         bool _ok = IERC20(_auction.currencyAddress).transfer(_auction.creator, _auction.highestBid);
@@ -181,7 +181,7 @@ contract Auction is Ownable {
 
     function claimLot(uint256 _auctionId) public shouldBeFinished(_auctionId) {
         AuctionInfo memory _auction = auctions[_auctionId];
-        require(_auction.currentBidder == msg.sender, "Sender is not winner");
+        require(_auction.currentBidder == msg.sender, "The sender is not a winner");
         require(!_auction.lotTransferred, "The lot has already been transferred");
 
         IERC721(_auction.tokenAddress).transferFrom(address(this), _auction.currentBidder, _auction.tokenId);
@@ -212,6 +212,7 @@ contract Auction is Ownable {
         if (!_auction.repaymentTransferred) {
             bool _ok = IERC20(_auction.currencyAddress).transfer(_auction.creator, _auction.highestBid);
             require(_ok, "Failed to transfer the repayment");
+            _auction.repaymentTransferred = true;
         }
         if (!_auction.lotTransferred) {
             IERC721(_auction.tokenAddress).transferFrom(address(this), _auction.currentBidder, _auction.tokenId);
@@ -223,7 +224,21 @@ contract Auction is Ownable {
         emit AuctionClosed(_auctionId);
     }
 
-    modifier shouldBeActive(uint256 _auctionId) {
+    function regainLot(uint256 _auctionId) public shouldBeFinished(_auctionId) {
+        AuctionInfo memory _auction = auctions[_auctionId];
+        require(msg.sender == _auction.creator, "The sender is not an auction creator");
+        require(_auction.highestBid == 0, "The lot belongs to the winner of the auction");
+
+        IERC721(_auction.tokenAddress).transferFrom(address(this), _auction.creator, _auction.tokenId);
+
+        _auction.repaymentTransferred = true;
+        _auction.lotTransferred = true;
+        auctions[_auctionId] = _auction;
+
+        emit LotTransferred(_auctionId, _auction.creator);
+    }
+
+    modifier shouldBeActive(uint256 _auctionId)  {
         require(
             getStatus(_auctionId) == AuctionStatus.ACTIVE,
             "Auction is not active"

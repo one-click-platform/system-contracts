@@ -76,9 +76,10 @@ contract Auction is Ownable {
 
         if (_startTime < block.timestamp) {
             _auction.startTime = block.timestamp;
-            _auction.duration = _duration.sub(block.timestamp.sub(_auction.startTime));
+            _auction.duration = _duration.sub(block.timestamp.sub(_startTime));
         } else {
             _auction.startTime = _startTime;
+            _auction.duration = _duration;
         }
 
         _auction.creator = msg.sender;
@@ -87,7 +88,6 @@ contract Auction is Ownable {
         _auction.currencyAddress = _currencyAddress;
         _auction.startPrice = _startPrice;
         _auction.buyNowPrice = _buyNowPrice;
-        _auction.duration = _duration;
         _auction.bidIncrement = _bidIncrement;
         _auction.description = _description;
 
@@ -197,7 +197,7 @@ contract Auction is Ownable {
         bool _ok = IERC20(_auction.currencyAddress).transferFrom(msg.sender, address(this), _auction.buyNowPrice);
         require(_ok, "Failed to transfer the repayment");
 
-        IERC721(_auction.tokenAddress).transferFrom(address(this), _auction.currentBidder, _auction.tokenId);
+        IERC721(_auction.tokenAddress).transferFrom(address(this), msg.sender, _auction.tokenId);
 
         _auction.lotBought = true;
         _auction.lotTransferred = true;
@@ -210,9 +210,8 @@ contract Auction is Ownable {
         AuctionInfo memory _auction = auctions[_auctionId];
 
         if (!_auction.repaymentTransferred) {
-            bool _ok = IERC20(_auction.currencyAddress).transferFrom(msg.sender, address(this), _auction.buyNowPrice);
+            bool _ok = IERC20(_auction.currencyAddress).transfer(_auction.creator, _auction.highestBid);
             require(_ok, "Failed to transfer the repayment");
-            _auction.repaymentTransferred = true;
         }
         if (!_auction.lotTransferred) {
             IERC721(_auction.tokenAddress).transferFrom(address(this), _auction.currentBidder, _auction.tokenId);

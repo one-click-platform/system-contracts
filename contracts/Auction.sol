@@ -4,12 +4,11 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./Globals.sol";
 
-contract Auction is Ownable {
+contract Auction {
     using SafeMath for uint256;
     using Address for address;
 
@@ -204,24 +203,6 @@ contract Auction is Ownable {
         auctions[_auctionId] = _auction;
 
         emit LotTransferred(_auctionId, msg.sender);
-    }
-
-    function closeAuction(uint256 _auctionId) public onlyOwner shouldBeFinished(_auctionId) {
-        AuctionInfo memory _auction = auctions[_auctionId];
-
-        if (!_auction.repaymentTransferred) {
-            bool _ok = IERC20(_auction.currencyAddress).transfer(_auction.creator, _auction.highestBid);
-            require(_ok, "Failed to transfer the repayment");
-            _auction.repaymentTransferred = true;
-        }
-        if (!_auction.lotTransferred) {
-            IERC721(_auction.tokenAddress).transferFrom(address(this), _auction.currentBidder, _auction.tokenId);
-            _auction.lotTransferred = true;
-        }
-
-        auctions[_auctionId] = _auction;
-
-        emit AuctionClosed(_auctionId);
     }
 
     function regainLot(uint256 _auctionId) public shouldBeFinished(_auctionId) {

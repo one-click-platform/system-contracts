@@ -57,7 +57,7 @@ contract Auction {
         uint256 _durationIncrement,
         uint256 _bidIncrement,
         string memory _description
-    ) public returns (uint256) {
+    ) external returns (uint256) {
         require(_tokenAddress.isContract(), "Given token is not a contract");
         IERC721 _tokenContract = IERC721(_tokenAddress);
         require(_tokenContract.ownerOf(_tokenId) == msg.sender, "Is not owner of asset");
@@ -99,7 +99,7 @@ contract Auction {
         return _auctionId;
     }
 
-    function getAuctionInfo(uint256 _auctionId) public shouldExist(_auctionId) view returns (AuctionInfo memory) {
+    function getAuctionInfo(uint256 _auctionId) external shouldExist(_auctionId) view returns (AuctionInfo memory) {
         return auctions[_auctionId];
     }
 
@@ -125,7 +125,7 @@ contract Auction {
         return AuctionStatus.FINISHED;
     }
 
-    function bid(uint256 _auctionId, uint256 _amount) public {
+    function bid(uint256 _auctionId, uint256 _amount) external {
         require(
             _amount >= getRaisingBid(_auctionId),
             "Bid amount must exceed the highest bid by the minimum increment percentage or more."
@@ -165,7 +165,7 @@ contract Auction {
         return _highestBid.mul(_auction.bidIncrement).div(getDecimal()).add(_highestBid);
     }
 
-    function claimRepayment(uint256 _auctionId) public shouldBeFinished(_auctionId) {
+    function claimRepayment(uint256 _auctionId) external shouldBeFinished(_auctionId) {
         AuctionInfo memory _auction = auctions[_auctionId];
         require(_auction.creator == msg.sender, "The Sender is not a auction creator");
         require(!_auction.repaymentTransferred, "The repayment has already been transferred");
@@ -178,7 +178,7 @@ contract Auction {
         emit RepaymentTransferred(_auctionId, _auction.creator);
     }
 
-    function claimLot(uint256 _auctionId) public shouldBeFinished(_auctionId) {
+    function claimLot(uint256 _auctionId) external shouldBeFinished(_auctionId) {
         AuctionInfo memory _auction = auctions[_auctionId];
         require(_auction.currentBidder == msg.sender, "The sender is not a winner");
         require(!_auction.lotTransferred, "The lot has already been transferred");
@@ -190,8 +190,10 @@ contract Auction {
         emit LotTransferred(_auctionId, msg.sender);
     }
 
-    function buyNow(uint256 _auctionId) public shouldBeActive(_auctionId) {
+    function buyNow(uint256 _auctionId) external shouldBeActive(_auctionId) {
         AuctionInfo memory _auction = auctions[_auctionId];
+
+        require(_auction.buyNowPrice > _auction.highestBid, "Buying immediately is no longer relevant");
 
         bool _ok = IERC20(_auction.currencyAddress).transferFrom(msg.sender, address(this), _auction.buyNowPrice);
         require(_ok, "Failed to transfer the repayment");
@@ -205,7 +207,7 @@ contract Auction {
         emit LotTransferred(_auctionId, msg.sender);
     }
 
-    function regainLot(uint256 _auctionId) public shouldBeFinished(_auctionId) {
+    function regainLot(uint256 _auctionId) external shouldBeFinished(_auctionId) {
         AuctionInfo memory _auction = auctions[_auctionId];
         require(msg.sender == _auction.creator, "The sender is not an auction creator");
         require(_auction.highestBid == 0, "The lot belongs to the winner of the auction");
